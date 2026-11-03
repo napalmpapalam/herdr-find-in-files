@@ -1,0 +1,6 @@
+[fmt]
+printWidth = 100
+sortImports = true
+
+[lint]
+maxWarnings = 0
