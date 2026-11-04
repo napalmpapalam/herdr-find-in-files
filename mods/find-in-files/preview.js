@@ -15,7 +15,7 @@ const LINE_HEIGHT = 1.6;
 // Of the font size: a code font's digit, for the width of the line numbers.
 const CHAR_WIDTH = 0.62;
 
-/** Returns the preview of `hit`, whose file is `file` ({ state, lines }) once it is asked for. */
+/** Returns the preview of `hit`, whose file is `file` ({ state, lines, tokens }) once asked for. */
 export const preview = (hit, file, t) => {
   const size = codeSize();
   const lineHeight = Math.round(size * LINE_HEIGHT);
@@ -67,14 +67,18 @@ const body = (hit, file, { size, lineHeight }, t) => {
     // Every line starts at one column: the one that brings the first match into view.
     start: startColumn(hit.text, hit.ranges),
   };
-  const lines = file.lines.slice(from, to).map((text, k) => line(text, from + k + 1, look, t));
+
+  const lines = file.lines.slice(from, to).map((text, k) => {
+    const i = from + k;
+    return line({ text, tokens: file.tokens.line(i) }, i + 1, look, t);
+  });
 
   return v_flex().py(2).font_family(codeFont()).text_size(size).children(lines);
 };
 
-const line = (text, n, { hit, lineHeight, gutter, start }, t) => {
+const line = ({ text, tokens }, n, { hit, lineHeight, gutter, start }, t) => {
   const isHit = n === hit.line;
-  const part = clip(text, isHit ? hit.ranges : [], start);
+  const part = clip({ text, ranges: isHit ? hit.ranges : [], tokens }, start);
   const number = h_flex()
     .w(gutter)
     .flex_none()
@@ -88,7 +92,7 @@ const line = (text, n, { hit, lineHeight, gutter, start }, t) => {
     .flex_none()
     .when(isHit, (el) => el.bg(t.selected))
     .child(number)
-    .child(codeLine(spans(part.text, part.ranges), t));
+    .child(codeLine(spans(part), t));
 };
 
 const note = (text, t) => div().p(10).text_color(t.dim).child(text);

@@ -6,6 +6,7 @@ import { div } from "gpui-kit";
 import { codeFont, codeLine, SMALL_TEXT } from "./code.js";
 import { excerpt, spans } from "./lines.js";
 import { displayPath } from "./rg.js";
+import { languageOf, lineTokens } from "./syntax.js";
 
 const ID = "fif-hits";
 const ROW = 26;
@@ -52,7 +53,9 @@ const rows = ({ hits, selected, scroll, onClick }, t) => {
 const hitKey = (hit) => `${hit.path}:${hit.line}`;
 
 const hitRow = (hit, isSelected, t) => {
-  const { text, ranges } = excerpt(hit);
+  // Only the part in view: the tokenizer colors at most 24 spans of a line.
+  const part = excerpt(hit);
+  const tokens = lineTokens(part.text, languageOf(hit.path));
 
   return h_flex()
     .h(ROW)
@@ -62,7 +65,7 @@ const hitRow = (hit, isSelected, t) => {
     .cursor_pointer()
     .bg(isSelected ? t.selected : t.surface)
     .hover((s) => s.bg(isSelected ? t.selected : t.hover))
-    .child(codeLine(spans(text, ranges), t).font_family(codeFont()))
+    .child(codeLine(spans({ ...part, tokens }), t).font_family(codeFont()))
     .child(location(displayPath(hit.path), hit.line, t));
 };
 

@@ -1,0 +1,14 @@
+Third-party notices
+===================
+
+Unless noted below, the files in this repository are licensed under the MIT
+License (see LICENSE).
+
+
+herdr-reviewer (MIT License)
+----------------------------
+
+mods/find-in-files/vendor/highlight.js is an unmodified copy of
+mods/reviewer/highlight.js from herdr-reviewer
+(https://github.com/vytasgavelis/herdr-reviewer), Copyright (c) 2026 Vytas
+Gavelis. Its license is in mods/find-in-files/vendor/herdr-reviewer.LICENSE.

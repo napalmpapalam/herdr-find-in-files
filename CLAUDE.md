@@ -11,6 +11,9 @@ default export that Herdr needs). Herdr's API is in
 - `bun fmt --check`, `bun lint`, `bun test` (config in `bunfig.toml`; the
   format keeps the Herdr house style of double quotes and semicolons). The
   tests sit next to the modules they test, which do not import Herdr.
+- `mods/find-in-files/vendor/` holds unmodified third-party copies (see
+  `THIRD-PARTY-NOTICES`). `.prettierignore` and `.eslintignore` keep the
+  checks off them; change them only by copying a new upstream version.
 - `scripts/install.sh` copies the mod into Herdr and runs `herdr-app check`.
   It leaves out the tests. Never symlink the mod: Herdr does not reload a
   linked folder.

@@ -27,33 +27,44 @@ export const startColumn = (text, ranges, from = 0) => {
   return outsidePair(text, first - LEAD_BEFORE);
 };
 
-/** Returns the `width` characters of `text` from `start`, with `ranges` moved to match. */
-export const clip = (text, ranges, start, width = WIDTH) => {
+/** Returns the `width` characters of a line from `start`, with its ranges and tokens moved. */
+export const clip = ({ text, ranges, tokens = [] }, start, width = WIDTH) => {
   const end = outsidePair(text, Math.min(text.length, start + width));
   const move = (i) => Math.min(Math.max(i, start), end) - start;
-  const inView = ranges.filter((r) => r.end > start && r.start < end);
-  return { text: text.slice(start, end), ranges: inView.map((r) => moveRange(r, move)) };
+  const inView = (list) => {
+    return list.filter((r) => r.end > start && r.start < end).map((r) => moveRange(r, move));
+  };
+
+  return { text: text.slice(start, end), ranges: inView(ranges), tokens: inView(tokens) };
 };
 
 /** Returns a hit's line for its row: no indent, and "…" before a far match. */
-export const excerpt = (hit) => {
-  const indent = hit.text.length - hit.text.trimStart().length;
-  const start = startColumn(hit.text, hit.ranges, indent);
-  const part = clip(hit.text, hit.ranges, start);
-  if (start === indent) return part;
+export const excerpt = ({ text, ranges }) => {
+  const indent = text.length - text.trimStart().length;
+  const start = startColumn(text, ranges, indent);
+  const part = clip({ text, ranges }, start);
+  if (start === indent) return { text: part.text, ranges: part.ranges };
 
-  const ranges = part.ranges.map((r) => moveRange(r, (i) => i + ELLIPSIS.length));
-  return { text: ELLIPSIS + part.text, ranges };
+  const moved = part.ranges.map((r) => moveRange(r, (i) => i + ELLIPSIS.length));
+  return { text: ELLIPSIS + part.text, ranges: moved };
 };
 
-/** Returns `text` as { text, mark } parts; `ranges` are sorted and apart. */
-export const spans = (text, ranges) => {
-  const parts = ranges.flatMap((r, k) => [
-    { text: text.slice(ranges[k - 1]?.end ?? 0, r.start), mark: false },
-    { text: text.slice(r.start, r.end), mark: true },
-  ]);
-  const tail = { text: text.slice(ranges.at(-1)?.end ?? 0), mark: false };
-  return [...parts, tail].filter((part) => part.text);
+/** Returns a line as { text, mark, cls? } parts; its ranges and its tokens are sorted and apart. */
+export const spans = ({ text, ranges, tokens = [] }) => {
+  const ends = [...ranges, ...tokens].flatMap((r) => [r.start, r.end]);
+  const cuts = [...new Set([0, text.length, ...ends])].sort((a, b) => a - b);
+
+  const parts = cuts.slice(1).map((end, k) => {
+    const start = cuts[k];
+    const isIn = (r) => r.start <= start && end <= r.end;
+    return {
+      text: text.slice(start, end),
+      mark: ranges.some(isIn),
+      cls: tokens.find(isIn)?.cls,
+    };
+  });
+
+  return parts.filter((part) => part.text);
 };
 
 export const expandTabs = (text) => text.replace(/\t/g, TAB);
@@ -63,4 +74,4 @@ const outsidePair = (text, i) => (isLowSurrogate(text.charCodeAt(i)) ? i - 1 : i
 
 const isLowSurrogate = (code) => code >= LOW_SURROGATE_FIRST && code <= LOW_SURROGATE_LAST;
 
-const moveRange = (range, move) => ({ start: move(range.start), end: move(range.end) });
+const moveRange = (range, move) => ({ ...range, start: move(range.start), end: move(range.end) });

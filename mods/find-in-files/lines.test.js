@@ -38,9 +38,17 @@ describe("lines", () => {
         { start: 8, end: 9 },
       ];
 
-      const part = clip("0123456789", ranges, 3, 4);
+      const part = clip({ text: "0123456789", ranges }, 3, 4);
 
-      expect(part).toEqual({ text: "3456", ranges: [{ start: 1, end: 3 }] });
+      expect(part).toEqual({ text: "3456", ranges: [{ start: 1, end: 3 }], tokens: [] });
+    });
+
+    test("should cut a token at the window's edge and keep its class", () => {
+      const tokens = [{ start: 0, end: 5, cls: "keyword" }];
+
+      const part = clip({ text: "0123456789", ranges: [], tokens }, 3, 4);
+
+      expect(part.tokens).toEqual([{ start: 0, end: 2, cls: "keyword" }]);
     });
   });
 
@@ -68,7 +76,7 @@ describe("lines", () => {
         { start: 10, end: 13 },
       ];
 
-      const parts = spans("let foo = foo;", ranges);
+      const parts = spans({ text: "let foo = foo;", ranges });
 
       expect(parts.map((part) => [part.text, part.mark])).toEqual([
         ["let ", false],
@@ -80,7 +88,50 @@ describe("lines", () => {
     });
 
     test("should give a line without ranges as one plain part", () => {
-      expect(spans("abc", [])).toEqual([{ text: "abc", mark: false }]);
+      expect(spans({ text: "abc", ranges: [] })).toEqual([{ text: "abc", mark: false }]);
+    });
+
+    test("should cut a token where a match starts and ends", () => {
+      const line = {
+        text: "let foo;",
+        ranges: [{ start: 5, end: 6 }],
+        tokens: [
+          { start: 0, end: 3, cls: "keyword" },
+          { start: 4, end: 7, cls: "variable" },
+        ],
+      };
+
+      const parts = spans(line);
+
+      expect(parts.map((part) => [part.text, part.mark, part.cls])).toEqual([
+        ["let", false, "keyword"],
+        [" ", false, undefined],
+        ["f", false, "variable"],
+        ["o", true, "variable"],
+        ["o", false, "variable"],
+        [";", false, undefined],
+      ]);
+    });
+
+    test("should cut a match where a token starts and ends", () => {
+      const line = {
+        text: "foo.bar",
+        ranges: [{ start: 2, end: 5 }],
+        tokens: [
+          { start: 0, end: 3, cls: "variable" },
+          { start: 4, end: 7, cls: "function" },
+        ],
+      };
+
+      const parts = spans(line);
+
+      expect(parts.map((part) => [part.text, part.mark, part.cls])).toEqual([
+        ["fo", false, "variable"],
+        ["o", true, "variable"],
+        [".", true, undefined],
+        ["b", true, "function"],
+        ["ar", false, "function"],
+      ]);
     });
   });
 });
