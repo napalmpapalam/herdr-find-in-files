@@ -1,4 +1,4 @@
-# find-in-files
+# Find in Files
 
 A key opens a dialog over the window, like JetBrains' Find in Files. The
 person types text. The dialog lists every line in the focused terminal's
@@ -6,7 +6,7 @@ repo that holds that text, and shows the selected line with five lines
 above and below it, in syntax colors. Enter opens the hit in `$EDITOR` at
 its line, in a split to the right of the focused terminal.
 
-![find-in-files](preview.png)
+![Find in Files](preview.png)
 
 ## What you see
 

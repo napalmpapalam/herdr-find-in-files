@@ -1,10 +1,10 @@
-# find-in-files
+# Find in Files
 
 A [Herdr](https://herdr.dev) mod that searches the repo of the focused
 terminal for text, like JetBrains' Find in Files. It shows a dialog with a
 query input, the list of hits, and a preview of the selected hit's lines.
 
-![find-in-files](preview.png)
+![Find in Files](preview.png)
 
 ## What it does
 
