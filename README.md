@@ -4,6 +4,8 @@ A [Herdr](https://herdr.dev) mod that searches the repo of the focused
 terminal for text, like JetBrains' Find in Files. It shows a dialog with a
 query input, the list of hits, and a preview of the selected hit's lines.
 
+![find-in-files](preview.png)
+
 ## What it does
 
 - **Search as you type.** The mod runs
@@ -38,6 +40,10 @@ query input, the list of hits, and a preview of the selected hit's lines.
 2. Bind a key in `keys.json`, for example in `global`:
    `"cmd-shift-f": "mod.open:find-in-files"`. The key also closes the
    dialog.
+
+Or ask the agent in your Herdr window to add
+`herdr.dev/mods/napalmpapalam/find-in-files`; the steps are in Herdr's
+`AGENTS.md`. The agent also merges the key from `keys.json`.
 
 The mod needs `rg` ([ripgrep](https://github.com/BurntSushi/ripgrep)) and
 `git` on the `PATH` of the machine that the terminal runs on.

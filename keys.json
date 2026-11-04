@@ -1,0 +1,5 @@
+{
+  "global": {
+    "cmd-shift-f": "mod.open:find-in-files"
+  }
+}
