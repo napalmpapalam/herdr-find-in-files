@@ -11,16 +11,24 @@ its line, in a split to the right of the focused terminal.
 ## What you see
 
 A dialog, 75% of the window's width and 85% of its height (`overlay` in
-`mod.json`), `surface` fill, 14px padding, 10px between the three parts,
+`mod.json`), `surface` fill, 14px padding, 10px between the parts,
 `foreground` text at 13px. Top to bottom:
 
-- **Query input**, 36px tall, 10px side padding, 8px corners, 1px
+- **Query input**, 36px tall, 10px left padding, 6px right, 8px corners, 1px
   `accent` border, `background` fill, 13px text. The placeholder is "Find
   in files…". The dialog opens with the last query in it, all selected.
+  At its right end sit three option toggles, 2px apart:
+  Match case, Whole word and Regex, each a 24px square with 5px corners
+  and a 16px Lucide icon (`case-sensitive`, `whole-word`, `regex`). An
+  option that is off draws its icon in `dim`; one that is on draws it in
+  `accent` on an `accent` fill at `33` alpha. Under the pointer the icon
+  turns `foreground`, and a tooltip names the option and its key, e.g.
+  "Match case (⌥⌘C)".
 - **Status line**, 11.5px: on the left the searched root (the full path,
   `dim`, cut with "…" when long); on the right "Searching…", "1 hit",
-  "42 hits" or "1000+ hits", in `dim`. An rg error or the first line of
-  its stderr comes before the count, after " · ", in `blocked`.
+  "42 hits" or "1000+ hits", in `dim`. An rg error comes before the count,
+  after " · ", in `blocked`: the stderr line that starts with `error:`
+  (the reason of a bad regex), else the first line of stderr.
 - **Hit list**, all the height that is left, 7px corners, 1px `border`,
   with a vertical scrollbar over its right edge. Rows are 26px, 10px side
   padding, 16px between the line and the location. A row shows:
@@ -46,6 +54,10 @@ A dialog, 75% of the window's width and 85% of its height (`overlay` in
   starts at the same column, the one that brings the first match into
   view. Under the code: "Cannot read this file", or "Line N is not in the
   file now" when the file got shorter since the search.
+- **Key hints**, 11.5px in `dim`, 14px apart, with 4px more above them so
+  they sit midway between the preview and the dialog's edge: each key in
+  `foreground`, then what it does: "↑↓ select", "↵ open", "esc close", "⌥⌘C match
+  case", "⌥⌘B whole word", "⌥⌘R regex".
 
 **Matches** have an `accent` background at `55` alpha (hex) with 2px
 corners, in rows and in the preview's hit line. **Syntax colors** are the
@@ -61,20 +73,28 @@ appearance (keyword `#c586c0`, string `#ce9178`, comment `#6a9955`, number
 
 - **Search:** 150 ms after the last keystroke, `rg --json --fixed-strings
 --smart-case` runs in the git root of the focused terminal's folder (the
-  folder itself outside a repo), on the terminal's machine. Literal text;
-  a query without capitals ignores case. At most 1000 hits, sorted by path
-  and then line. An empty query clears the list. A newer query drops the
+  folder itself outside a repo), on the terminal's machine. Literal text
+  unless Regex is on; a query without capitals ignores case unless Match
+  case is on. At most 1000 hits, sorted by path and then line. An empty
+  query clears the list. A newer query drops the
   result of an older one that comes back late.
+- **Options** add flags before the query: Match case `--case-sensitive`
+  (it comes after the script's `--smart-case`, so it wins), Whole word
+  `--word-regexp`, Regex `--no-fixed-strings` (rg's own regex syntax). A
+  toggle searches again at once, without the 150 ms wait, and keeps the
+  keyboard in the query.
 - **Keys:** ↓ and ↑ move the selection and scroll the list to keep it in
   the middle. A click selects a row without a scroll. Enter opens the
-  selected hit. Esc closes the dialog, and so does the key that opened it.
+  selected hit. ⌥⌘C, ⌥⌘B and ⌥⌘R flip the three options. Esc closes
+  the dialog, and so does the key that opened it.
 - **Open:** Enter closes the dialog, then opens a terminal to the right of
   the focused one, in the root, that runs `${EDITOR:-nvim} +<line> <path>`.
 - **Preview:** selecting a hit reads its file once per search and shows
   the hit line with five lines above and below. The preview colors the file
   from its first line, so a block comment that starts above the preview
   shows as a comment. A row colors only the part of its line that it shows.
-- **The last query** stays after a close, also after Herdr restarts.
+- **The last query and the options** stay after a close, also after Herdr
+  restarts. They are global, not per repo.
 
 ## Built from
 
@@ -84,15 +104,19 @@ appearance (keyword `#c586c0`, string `#ce9178`, comment `#6a9955`, number
 - `herdr`: `props().overlay` and `closeOverlay`; `exec` for `git
 rev-parse --show-toplevel` and the search; `readTextFile` for the preview;
   `focused`, `panes`, `spaces`, `home` for the folder and machine;
-  `shared` / `setShared("find-in-files.query")`; `theme`, `settings` (`font`,
-  `font_size`, `dark`); `run("terminal.open", { argv, folder, place: "right"
-})`.
+  `shared` / `setShared` for `"find-in-files.query"` and
+  `"find-in-files.options"` (`{ matchCase, wholeWord, regex }`); `theme`,
+  `settings` (`font`, `font_size`, `dark`); `run("terminal.open", { argv,
+folder, place: "right" })`.
 - `gpui-base`: `InputState` + `Input`, `v_virtual_list` with a
   `VirtualListScrollHandle` and `on_item_click`, `Scrollbar.vertical`.
+- `gpui-kit`: `svg(path)` for the icons, `.tooltip(text)` on the toggles.
 - Programs: `sh`, `rg`, `grep`, `git`, and `$EDITOR`.
 - `vendor/highlight.js`: the line tokenizer of
   [herdr-reviewer](https://github.com/vytasgavelis/herdr-reviewer) (MIT,
-  license beside it), unmodified.
+  license beside it), unmodified. `vendor/*.svg`: three
+  [Lucide](https://lucide.dev) icons from `lucide-static` 0.460.0 (ISC,
+  `vendor/lucide.LICENSE`), unmodified.
 
 ## Watch out
 
@@ -112,6 +136,12 @@ rev-parse --show-toplevel` and the search; `readTextFile` for the preview;
 - `props()` is null under `herdr-app check`: the mod then draws without
   wiring the input.
 - Herdr gives a mod no close hook, so the query is saved on each search.
+  The options are saved on each toggle.
+- A bad regex makes rg exit 2 with no rows, and the pipe into grep hides
+  the exit code. Line 1 of stderr is only "rg: regex parse error:"; the
+  reason is on the line that starts with `error:`.
+- A zero-width regex (`^`, `x*`) matches every line, with empty
+  submatches: the list fills up to the cap and marks nothing.
 - The tokenizer colors at most 24 spans and 600 characters of a line. A
   row tokenizes only what it shows, so a far match still has colors.
 - `*.test.js` files are `bun test` tests next to their modules. Herdr never
@@ -129,3 +159,6 @@ rev-parse --show-toplevel` and the search; `readTextFile` for the preview;
   colors in the row and in the preview.
 - Enter opens `nvim` (or `$EDITOR`) on the hit's line in a split to the
   right; Esc closes the dialog; opening it again shows the last query.
+- ⌥⌘C on `foo` drops the `FOO` lines; ⌥⌘B drops `foobar`; ⌥⌘R on
+  `fo+b` finds `foobar`, and on `foo(` shows "error: unclosed group" in
+  red. A click on a toggle leaves the cursor in the query.

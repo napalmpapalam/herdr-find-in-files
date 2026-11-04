@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { displayPath, parseHits } from "./rg.js";
+import { displayPath, errorText, parseHits } from "./rg.js";
 
 const X = [{ start: 0, end: 1 }];
 
@@ -84,6 +84,24 @@ describe("rg", () => {
         "./a.js:7",
         "./b.js:1",
       ]);
+    });
+  });
+
+  describe("errorText", () => {
+    test("should show the reason of a regex error", () => {
+      const stderr = "rg: regex parse error:\n    (?:foo()\n    ^\nerror: unclosed group\n";
+
+      expect(errorText(stderr)).toBe("error: unclosed group");
+    });
+
+    test("should show the first line of any other error", () => {
+      const stderr = "rg: ./a: Permission denied (os error 13)\nrg: ./b: Permission denied\n";
+
+      expect(errorText(stderr)).toBe("rg: ./a: Permission denied (os error 13)");
+    });
+
+    test("should show nothing without stderr", () => {
+      expect(errorText("")).toBeNull();
     });
   });
 

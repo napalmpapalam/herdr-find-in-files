@@ -1,25 +1,56 @@
-// The top of the dialog: the query input, then the root and the status.
+// The top of the dialog: the query input and the option toggles, then the root and the status.
 
 import { h_flex, Input, v_flex } from "gpui-base";
-import { div } from "gpui-kit";
+import { div, svg } from "gpui-kit";
 
 import { SMALL_TEXT } from "./code.js";
+import { keyLabel, OPTIONS } from "./options.js";
 
-/** Returns the query input over a line with the searched root and the status. */
-export const header = ({ input, ...status }, t) => {
-  return v_flex().flex_none().gap(10).child(queryBox(input, t)).child(statusLine(status, t));
+const TOGGLE = 24;
+const ICON = 16;
+const ON_ALPHA = "33";
+
+/** Returns the query box and its toggles over the root and status; onToggle(option, cx) on a click. */
+export const header = ({ input, options, onToggle, ...status }, t) => {
+  return v_flex()
+    .flex_none()
+    .gap(10)
+    .child(queryBox(input, { options, onToggle }, t))
+    .child(statusLine(status, t));
 };
 
-const queryBox = (input, t) => {
+const queryBox = (input, toggles, t) => {
   return h_flex()
     .h(36)
-    .px(10)
+    .pl(10)
+    .pr(6)
+    .gap(2)
     .items_center()
     .rounded(8)
     .border_1()
     .border_color(t.accent)
     .bg(t.background)
-    .child(Input.new(input).flex_1().h_full().text_size(13).text_color(t.foreground));
+    .child(Input.new(input).flex_1().h_full().text_size(13).text_color(t.foreground))
+    .children(OPTIONS.map((option) => toggle(option, toggles, t)));
+};
+
+const toggle = (option, { options, onToggle }, t) => {
+  const isOn = options[option.id];
+  return div()
+    .id(`fif-${option.id}`)
+    .size(TOGGLE)
+    .flex_none()
+    .flex()
+    .items_center()
+    .justify_center()
+    .rounded(5)
+    .cursor_pointer()
+    .text_color(isOn ? t.accent : t.dim)
+    .when(isOn, (el) => el.bg(t.accent + ON_ALPHA))
+    .hover((s) => s.text_color(t.foreground))
+    .tooltip(`${option.name} (${keyLabel(option)})`)
+    .on_click((_e, cx) => onToggle(option, cx))
+    .child(svg(`mods/find-in-files/vendor/${option.icon}.svg`).size(ICON));
 };
 
 const statusLine = ({ root, status, isError }, t) => {

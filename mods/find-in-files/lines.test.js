@@ -87,6 +87,15 @@ describe("lines", () => {
       ]);
     });
 
+    test("should mark nothing for an empty range", () => {
+      const parts = spans({ text: "abc", ranges: [{ start: 1, end: 1 }] });
+
+      expect(parts.map((part) => [part.text, part.mark])).toEqual([
+        ["a", false],
+        ["bc", false],
+      ]);
+    });
+
     test("should give a line without ranges as one plain part", () => {
       expect(spans({ text: "abc", ranges: [] })).toEqual([{ text: "abc", mark: false }]);
     });

@@ -11,9 +11,21 @@ query input, the list of hits, and a preview of the selected hit's lines.
 - **Search as you type.** The mod runs
   `rg --json --fixed-strings --smart-case` from the git root of the focused
   terminal (or its folder outside a repo), 150 ms after the last keystroke.
-  The search is for literal text. A query with no capital letters ignores
+  By default the search is for literal text. A query with no capital letters ignores
   case. Like rg, it skips files that `.gitignore` names, hidden files and
   binary files. The list shows up to 1000 hits.
+- **Options.** Three toggles at the right end of the query box change the
+  search, and each one has a key:
+
+  | Toggle     | Key | Off                             | On                                               |
+  | ---------- | --- | ------------------------------- | ------------------------------------------------ |
+  | Match case | ⌥⌘C | smart case, as above            | case always counts (`-s`)                        |
+  | Whole word | ⌥⌘B | the query can be part of a word | only a whole word matches (`-w`)                 |
+  | Regex      | ⌥⌘R | the query is literal text       | the query is a Rust regex (`--no-fixed-strings`) |
+
+  A bad regex shows rg's reason in red under the query. A line at the bottom
+  of the dialog lists the keys.
+
 - **Hits** show the line with each match marked, then the file name, the
   line number and the folder.
 - **Preview.** The selected hit's line and five lines above and below it.
@@ -29,7 +41,8 @@ query input, the list of hits, and a preview of the selected hit's lines.
   arguments, like `code --wait`, works too) at its line, in a split to the
   right of the focused pane. **Esc** closes the dialog.
 - **The last query stays.** The dialog opens with the last query selected,
-  so typing replaces it, and searches it again at once.
+  so typing replaces it, and searches it again at once. The options stay
+  too.
 
 ## Install
 
@@ -51,11 +64,12 @@ The mod needs `rg` ([ripgrep](https://github.com/BurntSushi/ripgrep)) and
 ## Versions
 
 The mod's version is the `version` field in `mods/find-in-files/mod.json`,
-and each release has the tag `v<version>` in this repo. Version 0.2.0 was
+and each release has the tag `v<version>` in this repo. Version 0.3.0 was
 last tested on Herdr 0.1.12 (`herdr-app` 0.1.12) with ripgrep 15.1.
 
 ## License
 
 MIT, see [LICENSE](LICENSE). The syntax tokenizer is a copy of
-herdr-reviewer's, under its own MIT license: see
+herdr-reviewer's, under its own MIT license, and the option icons are
+[Lucide](https://lucide.dev)'s, under the ISC license: see
 [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES).

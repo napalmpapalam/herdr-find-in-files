@@ -7,12 +7,15 @@ import { closeOverlay, exec, props, run, setShared, shared, theme } from "herdr"
 import { FileState, readFile } from "./file.js";
 import { findRoot } from "./folder.js";
 import { header } from "./header.js";
+import { keyHints } from "./hints.js";
 import { hitList } from "./hit-list.js";
+import { optionFlags, optionOfKey, readOptions } from "./options.js";
 import { preview } from "./preview.js";
-import { displayPath, parseHits, SEARCH_SCRIPT } from "./rg.js";
+import { displayPath, errorText, parseHits, SEARCH_SCRIPT } from "./rg.js";
 import { settle } from "./settle.js";
 
 const QUERY_KEY = "find-in-files.query";
+const OPTIONS_KEY = "find-in-files.options";
 const DEBOUNCE_MS = 150;
 const STEPS = Object.freeze({ down: 1, up: -1 });
 // Unquoted, so an $EDITOR like "code --wait" splits into words. The path keeps rg's "./", so
@@ -23,6 +26,7 @@ export default class FindInFiles extends View {
   init(_props, cx) {
     this.overlay = props()?.overlay;
     this.query = shared(QUERY_KEY) ?? "";
+    this.options = readOptions(shared(OPTIONS_KEY));
     this.input = InputState.new({ placeholder: "Find in files…", value: this.query });
     this.scroll = VirtualListScrollHandle.new();
 
@@ -73,6 +77,15 @@ export default class FindInFiles extends View {
     });
   }
 
+  // A toggle searches at once: there is no typing to wait for.
+  toggle(option, cx) {
+    this.options = { ...this.options, [option.id]: !this.options[option.id] };
+    setShared(OPTIONS_KEY, this.options);
+    // A click on a toggle must not take the keyboard from the query.
+    this.input.focus();
+    this.search(++this.seq, cx);
+  }
+
   // exec cannot be cancelled, so a newer query (a higher seq) drops the result of an older one.
   search(seq, cx) {
     // Before the root is known, the root lookup searches for the latest query.
@@ -92,7 +105,9 @@ export default class FindInFiles extends View {
   }
 
   runSearch() {
-    const args = ["-c", SEARCH_SCRIPT, "sh", "--", this.query, "."];
+    // The script's --smart-case comes first, so --case-sensitive overrides it.
+    const flags = optionFlags(this.options);
+    const args = ["-c", SEARCH_SCRIPT, "sh", ...flags, "--", this.query, "."];
     return settle(exec("sh", args, { cwd: this.root, on: this.machine }));
   }
 
@@ -108,7 +123,7 @@ export default class FindInFiles extends View {
     }
 
     // rg reports an unreadable file on stderr and still lists the hits in the rest.
-    this.error = result.stderr.trim().split("\n")[0] || null;
+    this.error = errorText(result.stderr);
     ({ hits: this.hits, hasMore: this.hasMore } = parseHits(result.stdout));
     this.select(0, cx);
   }
@@ -146,10 +161,12 @@ export default class FindInFiles extends View {
   key(e, cx) {
     if (e.key === "escape") return this.close();
 
+    const option = optionOfKey(e);
     const step = STEPS[e.key];
-    if (!step) return;
+    if (!option && !step) return;
 
-    this.select(this.selected + step, cx);
+    if (option) this.toggle(option, cx);
+    if (step) this.select(this.selected + step, cx);
     cx.stop_propagation();
   }
 
@@ -172,6 +189,8 @@ export default class FindInFiles extends View {
     const hit = this.hits[this.selected];
     const top = {
       input: this.input,
+      options: this.options,
+      onToggle: (option, cx) => this.toggle(option, cx),
       root: this.root,
       status: this.status(),
       isError: Boolean(this.error),
@@ -196,6 +215,7 @@ export default class FindInFiles extends View {
       .on_key_down((e, cx) => this.key(e, cx))
       .child(header(top, t))
       .child(hitList(list, t))
-      .child(preview(hit, hit && this.files.get(hit.path), t));
+      .child(preview(hit, hit && this.files.get(hit.path), t))
+      .child(keyHints(t));
   }
 }

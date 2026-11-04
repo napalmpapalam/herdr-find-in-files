@@ -22,6 +22,13 @@ export const parseHits = (stdout, max = MAX_HITS) => {
   return { hits, hasMore: rows.length > max };
 };
 
+/** Returns the line of rg's stderr to show: the reason of a bad regex, else the first line. */
+export const errorText = (stderr) => {
+  const lines = stderr.trim().split("\n");
+  // A regex error starts with "rg: regex parse error:" and gives the reason on a later line.
+  return lines.find((line) => line.startsWith("error:")) ?? (lines[0] || null);
+};
+
 /** Returns a path as people read it, without rg's "./". */
 export const displayPath = (path) => path.replace(/^\.\//, "");
 
