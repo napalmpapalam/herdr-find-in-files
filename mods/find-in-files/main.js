@@ -9,7 +9,8 @@ import { findRoot } from "./folder.js";
 import { header } from "./header.js";
 import { keyHints } from "./hints.js";
 import { hitList } from "./hit-list.js";
-import { optionFlags, optionOfKey, readOptions } from "./options.js";
+import { isFiltersKey, optionFlags, optionOfKey, readOptions } from "./options.js";
+import { pathFlags } from "./paths.js";
 import { preview } from "./preview.js";
 import { displayPath, errorText, parseHits, SEARCH_SCRIPT } from "./rg.js";
 import { settle } from "./settle.js";
@@ -17,6 +18,8 @@ import { settle } from "./settle.js";
 const QUERY_KEY = "find-in-files.query";
 const OPTIONS_KEY = "find-in-files.options";
 const DEBOUNCE_MS = 150;
+const INCLUDE_PLACEHOLDER = "Files to include: src, *.js";
+const EXCLUDE_PLACEHOLDER = "Files to exclude: test, *.min.js";
 const STEPS = Object.freeze({ down: 1, up: -1 });
 // Unquoted, so an $EDITOR like "code --wait" splits into words. The path keeps rg's "./", so
 // a file named "-x" or "+x" is not an option.
@@ -30,6 +33,19 @@ export default class FindInFiles extends View {
     this.input = InputState.new({ placeholder: "Find in files…", value: this.query });
     this.scroll = VirtualListScrollHandle.new();
 
+    const { include, exclude } = this.options;
+    this.include = InputState.new({ placeholder: INCLUDE_PLACEHOLDER, value: include });
+    this.exclude = InputState.new({ placeholder: EXCLUDE_PLACEHOLDER, value: exclude });
+
+    // The path fields show at the start while they have text.
+    this.filtersOpen = this.hasPathText();
+
+    // The input that a click on a toggle gives the keyboard back to.
+    this.focused = this.input;
+
+    // Set by a toggle or a field, so the next save keeps the options.
+    this.optionsChanged = false;
+
     this.root = null;
     this.machine = null;
     this.seq = 0;
@@ -40,7 +56,12 @@ export default class FindInFiles extends View {
     if (!this.overlay) return; // `herdr-app check` loads the mod without an overlay
 
     this.input.on("change", (_e, cx) => this.changed(cx));
-    this.input.on("submit", () => this.open(this.hits[this.selected]));
+    this.include.on("change", (_e, cx) => this.pathsChanged(cx));
+    this.exclude.on("change", (_e, cx) => this.pathsChanged(cx));
+    [this.input, this.include, this.exclude].forEach((input) => {
+      input.on("submit", () => this.open(this.hits[this.selected]));
+      input.on("focus", () => (this.focused = input));
+    });
 
     // The last query is selected, so typing replaces it.
     this.input.focus();
@@ -66,11 +87,35 @@ export default class FindInFiles extends View {
   }
 
   close() {
+    this.save();
     closeOverlay(this.overlay);
+  }
+
+  // Each search saves too: Herdr gives a mod no close hook, and the close key never reaches it.
+  save() {
+    setShared(QUERY_KEY, this.query);
+    // Each setShared draws every mod again, so the options are saved only when they change.
+    if (!this.optionsChanged) return;
+
+    setShared(OPTIONS_KEY, this.options);
+    this.optionsChanged = false;
   }
 
   changed(cx) {
     this.query = this.input.value();
+    this.searchSoon(cx);
+  }
+
+  pathsChanged(cx) {
+    this.setOptions({
+      ...this.options,
+      include: this.include.value(),
+      exclude: this.exclude.value(),
+    });
+    this.searchSoon(cx);
+  }
+
+  searchSoon(cx) {
     const seq = ++this.seq;
     cx.timer.after(DEBOUNCE_MS, (cx) => {
       if (seq === this.seq) this.search(seq, cx);
@@ -79,11 +124,38 @@ export default class FindInFiles extends View {
 
   // A toggle searches at once: there is no typing to wait for.
   toggle(option, cx) {
-    this.options = { ...this.options, [option.id]: !this.options[option.id] };
-    setShared(OPTIONS_KEY, this.options);
-    // A click on a toggle must not take the keyboard from the query.
-    this.input.focus();
+    this.setOptions({ ...this.options, [option.id]: !this.options[option.id] });
+    // A click on a toggle must not take the keyboard from the input.
+    this.focused.focus();
     this.search(++this.seq, cx);
+  }
+
+  setOptions(options) {
+    this.options = options;
+    this.optionsChanged = true;
+  }
+
+  hasPathText() {
+    return Boolean(this.options.include || this.options.exclude);
+  }
+
+  // The fields hide only while both are empty: a hidden filter would still filter the hits.
+  toggleFilters(cx) {
+    if (this.filtersOpen && this.hasPathText()) return this.include.focus();
+
+    this.filtersOpen = !this.filtersOpen;
+    cx.notify();
+
+    if (!this.filtersOpen) {
+      this.focused = this.input;
+      return this.input.focus();
+    }
+
+    // The field draws in the next frame, and it takes the focus only after that.
+    cx.timer.after(1, (cx) => {
+      if (this.filtersOpen) this.include.focus();
+      cx.notify();
+    });
   }
 
   // exec cannot be cancelled, so a newer query (a higher seq) drops the result of an older one.
@@ -91,7 +163,7 @@ export default class FindInFiles extends View {
     // Before the root is known, the root lookup searches for the latest query.
     if (this.root === null) return;
 
-    setShared(QUERY_KEY, this.query);
+    this.save();
 
     if (!this.query) {
       this.reset();
@@ -106,7 +178,7 @@ export default class FindInFiles extends View {
 
   runSearch() {
     // The script's --smart-case comes first, so --case-sensitive overrides it.
-    const flags = optionFlags(this.options);
+    const flags = [...optionFlags(this.options), ...pathFlags(this.options)];
     const args = ["-c", SEARCH_SCRIPT, "sh", ...flags, "--", this.query, "."];
     return settle(exec("sh", args, { cwd: this.root, on: this.machine }));
   }
@@ -162,10 +234,12 @@ export default class FindInFiles extends View {
     if (e.key === "escape") return this.close();
 
     const option = optionOfKey(e);
+    const isFilters = isFiltersKey(e);
     const step = STEPS[e.key];
-    if (!option && !step) return;
+    if (!option && !isFilters && !step) return;
 
     if (option) this.toggle(option, cx);
+    if (isFilters) this.toggleFilters(cx);
     if (step) this.select(this.selected + step, cx);
     cx.stop_propagation();
   }
@@ -191,6 +265,8 @@ export default class FindInFiles extends View {
       input: this.input,
       options: this.options,
       onToggle: (option, cx) => this.toggle(option, cx),
+      paths: this.filtersOpen ? [this.include, this.exclude] : null,
+      onFilters: (cx) => this.toggleFilters(cx),
       root: this.root,
       status: this.status(),
       isError: Boolean(this.error),

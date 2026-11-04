@@ -26,10 +26,16 @@ export const OPTIONS = Object.freeze([
   }),
 ]);
 
-/** Returns the options from what `shared` kept, every option off when it kept nothing. */
+/** The key that shows and hides the path fields. */
+export const FILTERS_KEY = Object.freeze({ key: "j", label: "⇧⌘J" });
+
+/** Returns the toggles and path fields that `shared` kept: off and empty when it kept none. */
 export const readOptions = (kept) => {
-  return Object.fromEntries(OPTIONS.map(({ id }) => [id, kept?.[id] === true]));
+  const toggles = Object.fromEntries(OPTIONS.map(({ id }) => [id, kept?.[id] === true]));
+  return { ...toggles, include: keptText(kept?.include), exclude: keptText(kept?.exclude) };
 };
+
+const keptText = (value) => (typeof value === "string" ? value : "");
 
 /** Returns the rg flags of the options that are on. */
 export const optionFlags = (options) => {
@@ -40,6 +46,18 @@ export const optionFlags = (options) => {
 export const optionOfKey = ({ key, modifiers: m }) => {
   if (!m.alt || !m.platform || m.shift || m.control || m.function) return undefined;
   return OPTIONS.find((option) => option.key === key);
+};
+
+/** Returns whether `e` is ⇧⌘J, the key of the path fields. */
+export const isFiltersKey = ({ key, modifiers: m }) => {
+  return (
+    key.toLowerCase() === FILTERS_KEY.key &&
+    m.shift &&
+    m.platform &&
+    !m.alt &&
+    !m.control &&
+    !m.function
+  );
 };
 
 /** Returns an option's key as the Mac spells it, e.g. "⌥⌘C". */

@@ -1,19 +1,34 @@
 import { describe, expect, test } from "bun:test";
 
-import { keyLabel, optionFlags, optionOfKey, OPTIONS, readOptions } from "./options.js";
+import {
+  isFiltersKey,
+  keyLabel,
+  optionFlags,
+  optionOfKey,
+  OPTIONS,
+  readOptions,
+} from "./options.js";
 
 const CMD_ALT = { alt: true, platform: true, shift: false, control: false, function: false };
+const CMD_SHIFT = { ...CMD_ALT, alt: false, shift: true };
+const NOTHING = { matchCase: false, wholeWord: false, regex: false, include: "", exclude: "" };
 
 describe("options", () => {
   describe("readOptions", () => {
     test("should turn every option off when nothing was kept", () => {
-      expect(readOptions(undefined)).toEqual({ matchCase: false, wholeWord: false, regex: false });
+      expect(readOptions(undefined)).toEqual(NOTHING);
     });
 
     test("should keep only the options that were on", () => {
       const kept = { regex: true, wholeWord: "yes", other: true };
 
-      expect(readOptions(kept)).toEqual({ matchCase: false, wholeWord: false, regex: true });
+      expect(readOptions(kept)).toEqual({ ...NOTHING, regex: true });
+    });
+
+    test("should keep the path fields' text, and only text", () => {
+      const kept = { include: "src, *.js", exclude: 3 };
+
+      expect(readOptions(kept)).toEqual({ ...NOTHING, include: "src, *.js" });
     });
   });
 
@@ -43,6 +58,22 @@ describe("options", () => {
       ["fn as well", "c", { ...CMD_ALT, function: true }],
     ])("should find no option for %s", (_name, key, modifiers) => {
       expect(optionOfKey({ key, modifiers })).toBeUndefined();
+    });
+  });
+
+  describe("isFiltersKey", () => {
+    test.each([["j"], ["J"]])("should match ⇧⌘J when the key is %s", (key) => {
+      expect(isFiltersKey({ key, modifiers: CMD_SHIFT })).toBe(true);
+    });
+
+    test.each([
+      ["another letter", "k", CMD_SHIFT],
+      ["⌘ alone", "j", { ...CMD_SHIFT, shift: false }],
+      ["⌥ as well", "j", { ...CMD_SHIFT, alt: true }],
+      ["⌃ as well", "j", { ...CMD_SHIFT, control: true }],
+      ["fn as well", "j", { ...CMD_SHIFT, function: true }],
+    ])("should not match %s", (_name, key, modifiers) => {
+      expect(isFiltersKey({ key, modifiers })).toBe(false);
     });
   });
 

@@ -4,13 +4,14 @@ import { h_flex } from "gpui-base";
 import { div } from "gpui-kit";
 
 import { SMALL_TEXT } from "./code.js";
-import { keyLabel, OPTIONS } from "./options.js";
+import { FILTERS_KEY, keyLabel, OPTIONS } from "./options.js";
 
 const HINTS = Object.freeze([
   ["↑↓", "select"],
   ["↵", "open"],
   ["esc", "close"],
   ...OPTIONS.map((option) => [keyLabel(option), option.name.toLowerCase()]),
+  [FILTERS_KEY.label, "paths"],
 ]);
 
 /** Returns the dialog's keys, each one with what it does. */

@@ -17,7 +17,7 @@ Gavelis. Its license is in mods/find-in-files/vendor/herdr-reviewer.LICENSE.
 Lucide (ISC License)
 --------------------
 
-mods/find-in-files/vendor/case-sensitive.svg, whole-word.svg and regex.svg
-are unmodified copies of the icons of the same names from lucide-static
-0.460.0 (https://lucide.dev), Copyright (c) Lucide Contributors. Their license is in
-mods/find-in-files/vendor/lucide.LICENSE.
+mods/find-in-files/vendor/case-sensitive.svg, whole-word.svg, regex.svg and
+filter.svg are unmodified copies of the icons of the same names from
+lucide-static 0.460.0 (https://lucide.dev), Copyright (c) Lucide
+Contributors. Their license is in mods/find-in-files/vendor/lucide.LICENSE.
