@@ -1,6 +1,6 @@
 {
   "place": "none",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "title": "Find in Files",
   "overlay": {
     "kind": "dialog",

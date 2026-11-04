@@ -9,8 +9,105 @@ describe("syntax", () => {
 
       expect(tokens).toEqual([
         { start: 0, end: 5, cls: "keyword" },
+        { start: 6, end: 7, cls: "variable" },
         { start: 10, end: 11, cls: "number" },
       ]);
+    });
+
+    test("should color the names, brackets, constants and `this` of a line", () => {
+      const text = "f(this.a[i], MAX_N, NULL)";
+
+      const tokens = lineTokens(text, "js");
+
+      expect(tokens.map((t) => [text.slice(t.start, t.end), t.cls])).toEqual([
+        ["f", "function"],
+        ["(", "bracket"],
+        ["this", "keyword"],
+        ["a", "variable"],
+        ["[", "bracket"],
+        ["i", "variable"],
+        ["]", "bracket"],
+        ["MAX_N", "constant"],
+        ["NULL", "boolean"],
+        [")", "bracket"],
+      ]);
+    });
+
+    test("should color no names in shell, where a plain word is an argument", () => {
+      const text = '[ -n "$X" ] && echo hi';
+
+      const tokens = lineTokens(text, "sh");
+
+      expect(tokens.map((t) => t.cls)).toEqual(["bracket", "string", "bracket"]);
+    });
+
+    test("should color at most 48 parts of a line", () => {
+      expect(lineTokens("a ".repeat(60), "js")).toHaveLength(48);
+    });
+
+    test.each([
+      [
+        "js",
+        "export const f = () => { return 1; };",
+        [
+          ["export", "keyword"],
+          ["const", "keyword"],
+          ["return", "control"],
+        ],
+      ],
+      [
+        "js",
+        "export default x; switch (y) { default: break; }",
+        [
+          ["export", "keyword"],
+          ["default", "keyword"],
+          ["switch", "control"],
+          ["default", "control"],
+          ["break", "control"],
+        ],
+      ],
+      [
+        "rust",
+        "impl X for Y { fn f() { for i in v {} } }",
+        [
+          ["impl", "keyword"],
+          ["for", "keyword"],
+          ["fn", "keyword"],
+          ["for", "control"],
+          ["in", "control"],
+        ],
+      ],
+      [
+        "python",
+        "if x and y: import os",
+        [
+          ["if", "keyword"],
+          ["import", "keyword"],
+        ],
+      ],
+      [
+        "sh",
+        "export X; if true; then exit 0; fi",
+        [
+          ["export", "keyword"],
+          ["if", "control"],
+          ["then", "control"],
+          ["exit", "keyword"],
+          ["fi", "control"],
+        ],
+      ],
+    ])("should tell the %s keywords that branch from the ones that declare", (lang, text, want) => {
+      const tokens = lineTokens(text, lang).filter(
+        (t) => t.cls === "keyword" || t.cls === "control",
+      );
+
+      expect(tokens.map((t) => [text.slice(t.start, t.end), t.cls])).toEqual(want);
+    });
+
+    test("should keep one keyword class in SQL", () => {
+      const tokens = lineTokens("select x from t where y", "sql");
+
+      expect(tokens.map((t) => t.cls)).toEqual(["keyword", "keyword", "keyword"]);
     });
 
     test("should give no tokens to a file without a language", () => {

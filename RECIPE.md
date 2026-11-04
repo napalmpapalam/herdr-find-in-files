@@ -62,11 +62,25 @@ A dialog, 75% of the window's width and 85% of its height (`overlay` in
 **Matches** have an `accent` background at `55` alpha (hex) with 2px
 corners, in rows and in the preview's hit line. **Syntax colors** are the
 text color, picked from the file extension: VS Code's Dark+ in a dark
-appearance (keyword `#c586c0`, string `#ce9178`, comment `#6a9955`, number
-`#b5cea8`, function `#dcdcaa`, type `#4ec9b0`, boolean and constant
-`#569cd6`, variable `#9cdcfe`) and Light+ in a light one (`#af00db`,
-`#a31515`, `#008000`, `#098658`, `#795e26`, `#267f99`, `#0000ff`,
-`#001080`). Other text is `foreground`. Rows and preview lines draw at most
+appearance (text `#d4d4d4`, keyword `#569cd6`, control keyword `#c586c0`,
+string `#ce9178`, comment `#6a9955`, number `#b5cea8`, function `#dcdcaa`,
+type `#4ec9b0`, boolean `#569cd6`, name `#9cdcfe`, constant `#4fc1ff`,
+bracket `#ffd700`) and Light+ in a light one (`#000000`, `#0000ff`,
+`#af00db`, `#a31515`, `#008000`, `#098658`, `#795e26`, `#267f99`,
+`#0000ff`, `#001080`, `#0070c1`, `#0431fa`). A control keyword branches,
+loops or jumps (`if`, `for`, `return`, `throw`, `await`; `fi` and `esac` in
+shell). The lists in `syntax.js` are Zed's own for JS, Rust, Go, C/C++ and
+shell, and a guess for Java, Ruby, PHP and Swift. Like Zed, a `default` not
+followed by `:` and Rust's `for` in an `impl` header take the keyword
+color. `import`, `export`, `this` and `self` take the keyword color too.
+Python has no control color, and its `and`, `or`, `not`, `in` and `is`
+keep the text color. SQL, CSS, HTML, YAML and JSON keep one keyword
+color. A name is any other word in JS, Rust, Python, Go,
+C, Java, Ruby, PHP and Swift; in shell a plain word is an argument and
+keeps the text color. A constant is an ALL_CAPS word other than `NULL`,
+`TRUE` and `FALSE`. Brackets are `()[]{}`, one color at every depth.
+Operators and punctuation keep the text color, and so does a file with no
+language. Rows and preview lines draw at most
 300 characters; a tab draws as four spaces.
 
 ## How it behaves
@@ -142,8 +156,9 @@ folder, place: "right" })`.
   reason is on the line that starts with `error:`.
 - A zero-width regex (`^`, `x*`) matches every line, with empty
   submatches: the list fills up to the cap and marks nothing.
-- The tokenizer colors at most 24 spans and 600 characters of a line. A
-  row tokenizes only what it shows, so a far match still has colors.
+- The tokenizer colors at most 24 spans and 600 characters of a line, and
+  `syntax.js` at most 48 parts: each part is an element. A row tokenizes
+  only what it shows, so a far match still has colors.
 - `*.test.js` files are `bun test` tests next to their modules. Herdr never
   loads them; leave them out of the install.
 
